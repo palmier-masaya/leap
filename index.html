@@ -16,6 +16,7 @@
             min-height: 100vh;
             margin: 0;
             padding: 20px 0;
+            overflow: hidden; /* アニメーション中のはみ出しを防止 */
         }
         .container {
             background-color: #fff;
@@ -25,7 +26,18 @@
             width: 90%;
             max-width: 500px;
             text-align: center;
+            /* ===== アニメーションの基本スタイルを追加 ===== */
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+            will-change: opacity, transform;
         }
+
+        /* ===== アニメーション用のクラス ===== */
+        .hidden {
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none; /* 非表示中はクリックさせない */
+        }
+        
         h1 {
             color: #4a4a4a;
             margin-top: 0;
@@ -132,18 +144,9 @@
             padding: 15px;
             margin-top: 20px;
             text-align: left;
-            display: none; /* 最初は非表示 */
-            animation: fadeIn 0.5s ease;
+            transition: opacity 0.4s ease, transform 0.4s ease; /* アニメーション追加 */
         }
-        #answer-details .pos {
-            font-weight: bold;
-            color: #005a9c;
-            margin-right: 10px;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        
         .action-button {
             width: 100%;
             padding: 15px;
@@ -153,7 +156,7 @@
             border-radius: 8px;
             cursor: pointer;
             margin-top: 20px;
-            transition: background-color 0.3s;
+            transition: all 0.3s;
         }
         #submit-answer-btn {
             background-color: #17a2b8;
@@ -173,84 +176,42 @@
         <button id="typing-mode-btn" class="mode-button">タイプ入力</button>
     </div>
 
-    <div id="quiz-container" class="container" style="display: none;">
+    <div id="quiz-container" class="container hidden" style="display: none;">
         <h1>LEAP 英単語学習</h1>
-        <p id="question-sentence"></p>
-        <p id="translation"></p>
-
-        <div id="choices-container"></div>
-
-        <div id="typing-container" style="display: none;">
-            <input type="text" id="answer-input" placeholder="答えを入力" autocomplete="off" autocapitalize="off">
-            <button id="submit-answer-btn" class="action-button">決定</button>
+        <div id="quiz-content">
+            <p id="question-sentence"></p>
+            <p id="translation"></p>
+            <div id="choices-container"></div>
+            <div id="typing-container" style="display: none;">
+                <input type="text" id="answer-input" placeholder="答えを入力" autocomplete="off" autocapitalize="off">
+                <button id="submit-answer-btn" class="action-button">決定</button>
+            </div>
+            <p id="result-display"></p>
+            <div id="answer-details" class="hidden" style="display: none;"></div>
         </div>
-
-        <p id="result-display"></p>
-        <div id="answer-details"></div>
-
-        <button id="next-button" class="action-button" style="display: none;">次の問題へ</button>
-        <button id="restart-button" class="action-button" style="display: none;">モード選択へ戻る</button>
+        <button id="next-button" class="action-button hidden" style="display: none;">次の問題へ</button>
+        <button id="restart-button" class="action-button hidden" style="display: none;">モード選択へ戻る</button>
     </div>
 
-
     <script>
-    // ====== クイズのデータ（choicesは不要になりました）======
     const quizzes = [
-        {
-            question: "He is [] at work.",
-            translation: "彼は仕事をいい加減にやる",
-            answer: "lazy",
-            details: { pos: "形", meaning: "(やる気がなく)怠惰な、いい加減な" }
-        },
-        {
-            question: "a [] rule",
-            translation: "厳しい規則",
-            answer: "strict",
-            details: { pos: "形", meaning: "厳しい、厳格な" }
-        },
-        {
-            question: "The [] Duckling.",
-            translation: "『醜いアヒルの子』",
-            answer: "Ugly",
-            details: { pos: "形", meaning: "醜い、不格好な" }
-        },
-        {
-            question: "a highly [] woman",
-            translation: "きわめて聡明な女性",
-            answer: "intelligent",
-            details: { pos: "形", meaning: "知的な、賢い" }
-        },
-        {
-            question: "Don't be []!",
-            translation: "ばかなことを言うな！",
-            answer: "silly",
-            details: { pos: "形", meaning: "ばかな、愚かな" }
-        },
-        {
-            question: "I have [] interests.",
-            translation: "私は幅広い興味を持っている。",
-            answer: "broad",
-            details: { pos: "形", meaning: "（範囲が）広い" }
-        },
-        {
-            question: "an [] event",
-            translation: "毎年恒例のイベント",
-            answer: "annual",
-            details: { pos: "形", meaning: "年に一度の、毎年の" }
-        }
+        { question: "He is [] at work.", translation: "彼は仕事をいい加減にやる", answer: "lazy", details: { pos: "形", meaning: "(やる気がなく)怠惰な、いい加減な" }},
+        { question: "a [] rule", translation: "厳しい規則", answer: "strict", details: { pos: "形", meaning: "厳しい、厳格な" }},
+        { question: "The [] Duckling.", translation: "『醜いアヒルの子』", answer: "Ugly", details: { pos: "形", meaning: "醜い、不格好な" }},
+        { question: "a highly [] woman", translation: "きわめて聡明な女性", answer: "intelligent", details: { pos: "形", meaning: "知的な、賢い" }},
+        { question: "Don't be []!", translation: "ばかなことを言うな！", answer: "silly", details: { pos: "形", meaning: "ばかな、愚かな" }},
+        { question: "I have [] interests.", translation: "私は幅広い興味を持っている。", answer: "broad", details: { pos: "形", meaning: "（範囲が）広い" }},
+        { question: "an [] event", translation: "毎年恒例のイベント", answer: "annual", details: { pos: "形", meaning: "年に一度の、毎年の" }}
     ];
-    // =============================
 
-    let currentQuiz;
-    let currentMode;
-    let usedIndexes = [];
-    let score = 0;
+    let currentQuiz, currentMode, usedIndexes = [], score = 0;
 
     const modeSelectionContainer = document.getElementById('mode-selection-container');
     const quizContainer = document.getElementById('quiz-container');
     const choiceModeBtn = document.getElementById('choice-mode-btn');
     const typingModeBtn = document.getElementById('typing-mode-btn');
 
+    const quizContentEl = document.getElementById('quiz-content');
     const questionSentenceEl = document.getElementById('question-sentence');
     const translationEl = document.getElementById('translation');
     const choicesContainerEl = document.getElementById('choices-container');
@@ -263,45 +224,61 @@
     const nextButton = document.getElementById('next-button');
     const restartButton = document.getElementById('restart-button');
 
+    const ANIMATION_DELAY = 400; // アニメーションの時間（CSSと合わせる）
+
+    // ===== 画面切り替え関数 =====
+    function switchScreen(hideEl, showEl) {
+        hideEl.classList.add('hidden');
+        setTimeout(() => {
+            hideEl.style.display = 'none';
+            showEl.style.display = 'block';
+            setTimeout(() => showEl.classList.remove('hidden'), 50); // 少し遅らせて表示
+        }, ANIMATION_DELAY);
+    }
+
     // ===== 初期化とモード選択 =====
     choiceModeBtn.addEventListener('click', () => startQuiz('choice'));
     typingModeBtn.addEventListener('click', () => startQuiz('typing'));
 
     function startQuiz(mode) {
         currentMode = mode;
-        modeSelectionContainer.style.display = 'none';
-        quizContainer.style.display = 'block';
-        loadNextQuiz();
+        switchScreen(modeSelectionContainer, quizContainer);
+        setTimeout(loadNextQuiz, ANIMATION_DELAY);
     }
-
+    
     // ===== クイズ進行 =====
     function loadNextQuiz() {
         if (usedIndexes.length === quizzes.length) {
             showFinalResult();
             return;
         }
-        let newIndex;
-        do {
-            newIndex = Math.floor(Math.random() * quizzes.length);
-        } while (usedIndexes.includes(newIndex));
+        quizContentEl.classList.add('hidden'); // 次の問題の前にコンテンツを隠す
+        
+        setTimeout(() => {
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * quizzes.length);
+            } while (usedIndexes.includes(newIndex));
 
-        usedIndexes.push(newIndex);
-        currentQuiz = quizzes[newIndex];
-        displayQuiz();
+            usedIndexes.push(newIndex);
+            currentQuiz = quizzes[newIndex];
+            displayQuiz();
+            quizContentEl.classList.remove('hidden'); // 新しい問題を表示
+        }, ANIMATION_DELAY);
     }
 
     function displayQuiz() {
-        // UIリセット
         resultDisplayEl.textContent = '';
+        answerDetailsEl.classList.add('hidden');
         answerDetailsEl.style.display = 'none';
+        nextButton.classList.add('hidden');
         nextButton.style.display = 'none';
+        restartButton.classList.add('hidden');
         restartButton.style.display = 'none';
 
-        // 問題文表示
         questionSentenceEl.textContent = currentQuiz.question;
         translationEl.textContent = currentQuiz.translation;
 
-        // モードに応じて表示を切り替え
         if (currentMode === 'choice') {
             displayChoiceMode();
         } else {
@@ -309,21 +286,16 @@
         }
     }
 
-    // ===== 4択モードの表示 =====
     function displayChoiceMode() {
         choicesContainerEl.style.display = 'grid';
         typingContainerEl.style.display = 'none';
         choicesContainerEl.innerHTML = '';
-
-        // 選択肢を自動生成
         const correctAnswer = currentQuiz.answer;
         const allAnswers = quizzes.map(q => q.answer);
-        const incorrectOptions = allAnswers.filter(ans => ans !== correctAnswer);
+        const incorrectOptions = allAnswers.filter(ans => ans.toLowerCase() !== correctAnswer.toLowerCase());
         shuffleArray(incorrectOptions);
-
         const choices = [correctAnswer, ...incorrectOptions.slice(0, 3)];
         shuffleArray(choices);
-
         choices.forEach(choice => {
             const button = document.createElement('button');
             button.textContent = choice;
@@ -333,31 +305,27 @@
         });
     }
 
-    // ===== タイプ入力モードの表示 =====
     function displayTypingMode() {
         choicesContainerEl.style.display = 'none';
         typingContainerEl.style.display = 'block';
         answerInputEl.value = '';
         answerInputEl.disabled = false;
-        answerInputEl.focus();
+        setTimeout(() => answerInputEl.focus(), ANIMATION_DELAY);
     }
 
     // ===== 回答チェック =====
-    submitAnswerBtn.addEventListener('click', () => {
-        checkAnswer(answerInputEl.value);
-    });
+    submitAnswerBtn.addEventListener('click', () => checkAnswer(answerInputEl.value));
     answerInputEl.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            checkAnswer(answerInputEl.value);
+            submitAnswerBtn.click();
         }
     });
 
     function checkAnswer(userAnswer, selectedButton = null) {
-        if (!userAnswer.trim()) return; // 空の回答は無視
+        if (!userAnswer.trim()) return;
 
         let isCorrect = userAnswer.trim().toLowerCase() === currentQuiz.answer.toLowerCase();
 
-        // UIを無効化
         if (currentMode === 'choice') {
             document.querySelectorAll('.choice-button').forEach(btn => {
                 btn.disabled = true;
@@ -372,7 +340,6 @@
             answerInputEl.disabled = true;
         }
 
-        // 正誤判定表示
         if (isCorrect) {
             resultDisplayEl.textContent = '正解！';
             resultDisplayEl.style.color = 'green';
@@ -383,7 +350,9 @@
         }
 
         showAnswerDetails();
+
         nextButton.style.display = 'block';
+        setTimeout(() => nextButton.classList.remove('hidden'), 50);
         nextButton.focus();
     }
 
@@ -394,31 +363,34 @@
         if (details) {
             answerDetailsEl.innerHTML = `<span class="pos">[${details.pos}]</span> ${details.meaning}`;
             answerDetailsEl.style.display = 'block';
+            setTimeout(() => answerDetailsEl.classList.remove('hidden'), 50);
         }
     }
 
     function showFinalResult() {
-        questionSentenceEl.textContent = '全問終了！';
-        translationEl.textContent = `あなたのスコアは ${quizzes.length} 問中 ${score} 問正解でした！`;
-        choicesContainerEl.style.display = 'none';
-        typingContainerEl.style.display = 'none';
-        resultDisplayEl.textContent = '';
-        answerDetailsEl.style.display = 'none';
-        nextButton.style.display = 'none';
-        restartButton.style.display = 'block';
+        quizContentEl.classList.add('hidden');
+        setTimeout(() => {
+            questionSentenceEl.textContent = '全問終了！';
+            translationEl.textContent = `あなたのスコアは ${quizzes.length} 問中 ${score} 問正解でした！`;
+            choicesContainerEl.style.display = 'none';
+            typingContainerEl.style.display = 'none';
+            resultDisplayEl.textContent = '';
+            answerDetailsEl.style.display = 'none';
+            nextButton.style.display = 'none';
+            restartButton.style.display = 'block';
+            setTimeout(() => restartButton.classList.remove('hidden'), 50);
+            quizContentEl.classList.remove('hidden');
+        }, ANIMATION_DELAY);
     }
-
+    
     // ===== リスタート処理 =====
     restartButton.addEventListener('click', () => {
         score = 0;
         usedIndexes = [];
-        quizContainer.style.display = 'none';
-        modeSelectionContainer.style.display = 'block';
+        switchScreen(quizContainer, modeSelectionContainer);
     });
     nextButton.addEventListener('click', loadNextQuiz);
 
-
-    // ===== ヘルパー関数：配列をシャッフル =====
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
